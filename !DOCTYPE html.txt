@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Weather Station</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #0f172a; color: white; margin: 0; padding: 20px; text-align: center; }
+        h1 { margin-bottom: 5px; color: #38bdf8; }
+        #date-time { margin-bottom: 30px; color: #94a3b8; font-size: 1.1em; }
+        
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; max-width: 1000px; margin: 0 auto; }
+        .card { background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .label { color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .value { font-size: 2rem; font-weight: bold; }
+        .unit { font-size: 1rem; color: #38bdf8; margin-left: 4px; }
+        
+        /* Specific Styles */
+        .fan-on { color: #4ade80; } .fan-off { color: #f87171; }
+        .rain-alert { color: #60a5fa; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+        
+        .btn { background: #38bdf8; border: none; padding: 10px 20px; border-radius: 8px; color: #0f172a; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn:hover { background: #0ea5e9; }
+    </style>
+</head>
+<body>
+
+    <h1>Weather Monitoring System</h1>
+    <div id="date-time">Syncing time...</div>
+
+    <div class="dashboard">
+        <div class="card"><div class="label">Temperature</div><span class="value" id="temp">--</span><span class="unit">°C</span></div>
+        <div class="card"><div class="label">Humidity</div><span class="value" id="hum">--</span><span class="unit">%</span></div>
+        <div class="card"><div class="label">Pressure</div><span class="value" id="pres">--</span><span class="unit">hPa</span></div>
+        
+        <div class="card"><div class="label">Air Quality (PM2.5)</div><span class="value" id="pm25">--</span><span class="unit">µg/m³</span></div>
+        <div class="card"><div class="label">Wind Speed</div><span class="value" id="wind">--</span><span class="unit">km/h</span></div>
+        <div class="card"><div class="label">Wind Direction</div><span class="value" id="dir">--</span></div>
+        
+        <div class="card"><div class="label">Rain Status</div><span class="value" id="rain">DRY</span></div>
+        <div class="card"><div class="label">Battery</div><span class="value" id="batt">--</span><span class="unit">V</span></div>
+        <div class="card">
+            <div class="label">Fan Control</div>
+            <div class="value" id="fan-status">OFF</div>
+            <button class="btn" onclick="toggleFan()">TOGGLE FAN</button>
+        </div>
+    </div>
+
+    <script>
+        // REPLACE WITH YOUR FIREBASE CONFIG
+        const firebaseConfig = {
+            apiKey: "AIzaSyAj9oZblvzb7QLG6yC7VIzI0WQ8uqCkbio",
+            databaseURL: "https://iot-weather-monitoring-s-b34e6-default-rtdb.firebaseio.com/"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // 1. Live Clock
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('date-time').innerText = now.toLocaleDateString() + " | " + now.toLocaleTimeString();
+        }, 1000);
+
+        // 2. Read Weather Data
+        db.ref('Weather').on('value', (snap) => {
+            const data = snap.val();
+            document.getElementById('temp').innerText = data.Temperature || 0;
+            document.getElementById('hum').innerText = data.Humidity || 0;
+            document.getElementById('pres').innerText = data.Pressure || 0;
+            document.getElementById('pm25').innerText = data.PM25 || 0;
+            document.getElementById('wind').innerText = data.WindSpeed || 0;
+            document.getElementById('dir').innerText = data.WindDirection || "N";
+            document.getElementById('batt').innerText = data.BatteryVoltage || 0;
+            
+            const rainEl = document.getElementById('rain');
+            if(data.Rain) { rainEl.innerText = "RAINING"; rainEl.classList.add('rain-alert'); }
+            else { rainEl.innerText = "DRY"; rainEl.classList.remove('rain-alert'); }
+        });
+
+        // 3. Read Fan Status
+        let currentFanState = 0;
+        db.ref('Controls/FanStatus').on('value', (snap) => {
+            currentFanState = snap.val();
+            const fanEl = document.getElementById('fan-status');
+            fanEl.innerText = currentFanState ? "ON" : "OFF";
+            fanEl.className = currentFanState ? "value fan-on" : "value fan-off";
+        });
+
+        // 4. Manual Fan Toggle
+        function toggleFan() {
+            const newState = currentFanState === 1 ? 0 : 1;
+            db.ref('Controls').update({ FanStatus: newState });
+        }
+    </script>
+</body>
+</html>
