@@ -47,20 +47,6 @@ h1 { margin-bottom: 5px; color: #38bdf8; }
 
 .btn { background: #38bdf8; border: none; padding: 10px 20px; border-radius: 8px; color: #0f172a; font-weight: bold; cursor: pointer; margin-top: 10px; }
 .btn:hover { background: #0ea5e9; }
-
-/* Wind Compass */
-#compass {
-    width: 150px;
-    height: 150px;
-    margin: 0 auto;
-    position: relative;
-}
-#compass img {
-    width: 100%;
-    height: 100%;
-    transition: transform 0.5s ease-out;
-    transform-origin: 50% 50%;
-}
 </style>
 </head>
 <body>
@@ -75,14 +61,8 @@ h1 { margin-bottom: 5px; color: #38bdf8; }
     
     <div class="card"><div class="label">Air Quality (PM2.5)</div><span class="value" id="pm25">--</span><span class="unit">µg/m³</span></div>
     <div class="card"><div class="label">Wind Speed</div><span class="value" id="wind">--</span><span class="unit">km/h</span></div>
+    <div class="card"><div class="label">Wind Direction</div><span class="value" id="dir">--</span></div>
     
-    <div class="card">
-        <div class="label">Wind Direction</div>
-        <div id="compass">
-            <img src="https://i.imgur.com/6o2Q9mC.png" alt="Compass Arrow" id="compass-arrow">
-        </div>
-    </div>
-
     <div class="card"><div class="label">Rain Status</div><span class="value" id="rain">DRY</span></div>
     <div class="card"><div class="label">Fog Status</div><span class="value" id="fog">--</span></div>
     <div class="card"><div class="label">Battery</div><span class="value" id="batt">--</span><span class="unit">%</span></div>
@@ -95,7 +75,7 @@ h1 { margin-bottom: 5px; color: #38bdf8; }
 </div>
 
 <script>
-// Firebase config
+// Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyAj9oZblvzb7QLG6yC7VIzI0WQ8uqCkbio",
     databaseURL: "https://iot-weather-monitoring-s-b34e6-default-rtdb.asia-southeast1.firebasedatabase.app/"
@@ -104,13 +84,13 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Live Clock
+// 1️⃣ Live Clock
 setInterval(() => {
     const now = new Date();
     document.getElementById('date-time').innerText = now.toLocaleDateString() + " | " + now.toLocaleTimeString();
 }, 1000);
 
-// Read Weather Data
+// 2️⃣ Read Weather Data
 db.ref('Weather').on('value', (snap) => {
     const data = snap.val() || {};
 
@@ -119,9 +99,10 @@ db.ref('Weather').on('value', (snap) => {
     document.getElementById('pres').innerText = data.pressure || 0;
     document.getElementById('pm25').innerText = data.pm25 || 0;
     document.getElementById('wind').innerText = data.windSpeed || 0;
+    document.getElementById('dir').innerText = data.windDirection || "N";
     document.getElementById('batt').innerText = data.batteryPercent || 0;
 
-    // Rain
+    // Rain Status
     const rainEl = document.getElementById('rain');
     if(data.rain === "YES") { 
         rainEl.innerText = "RAINING"; 
@@ -131,7 +112,7 @@ db.ref('Weather').on('value', (snap) => {
         rainEl.classList.remove('rain-alert'); 
     }
 
-    // Fog
+    // Fog Status
     const fogEl = document.getElementById('fog');
     if(data.fog === "FOGGY"){
         fogEl.innerText = "🌫 FOGGY";
@@ -140,14 +121,9 @@ db.ref('Weather').on('value', (snap) => {
         fogEl.innerText = "CLEAR";
         fogEl.style.color = "#4ade80";
     }
-
-    // Wind Compass rotation
-    const arrow = document.getElementById('compass-arrow');
-    const deg = data.windDegree || 0; // must send windDegree from ESP32
-    arrow.style.transform = `rotate(${deg}deg)`;
 });
 
-// Fan status
+// 3️⃣ Read Fan Status
 let currentFanState = 0;
 db.ref('Controls/FanStatus').on('value', (snap) => {
     currentFanState = snap.val() || 0;
@@ -156,11 +132,12 @@ db.ref('Controls/FanStatus').on('value', (snap) => {
     fanEl.className = currentFanState ? "value fan-on" : "value fan-off";
 });
 
-// Toggle fan
+// 4️⃣ Manual Fan Toggle
 function toggleFan() {
     const newState = currentFanState === 1 ? 0 : 1;
     db.ref('Controls').update({ FanStatus: newState });
 }
 </script>
+
 </body>
 </html>
