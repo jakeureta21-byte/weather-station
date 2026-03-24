@@ -1,86 +1,226 @@
-<style>
-/* Modern Reference Styling */
-:root {
-    --bg-dark: #0f172a;
-    --card-bg: #1e293b;
-    --accent: #38bdf8;
-    --text-dim: #94a3b8;
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Weather Monitoring System</title>
 
-body {
-    font-family: 'Segoe UI', sans-serif;
-    background-color: var(--bg-dark);
-    color: white;
-    padding: 20px;
-}
-
-.dashboard {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr); /* 4 columns like your image */
-    gap: 15px;
-    max-width: 1100px;
-    margin: 0 auto;
-}
-
-.card {
-    background: var(--card-bg);
-    padding: 15px;
-    border-radius: 12px;
-    border: 1px solid #334155;
-    text-align: center;
-    transition: transform 0.2s;
-}
-
-.card i { color: var(--accent); margin-right: 8px; }
-.label { color: var(--text-dim); font-size: 0.75rem; text-transform: uppercase; margin-bottom: 10px; display: block; }
-.value { font-size: 1.8rem; font-weight: bold; display: inline-block; }
-.unit { font-size: 1rem; color: var(--accent); margin-left: 5px; }
-
-/* Battery Specifics */
-.batt-subtext { display: block; color: var(--text-dim); font-size: 0.9rem; margin-top: 5px; }
-
-/* Prediction & Alert Cards (Span 2 columns) */
-.wide-card { grid-column: span 2; }
-
-.btn-toggle {
-    background: #38bdf8;
-    border: none;
-    padding: 8px 25px;
-    border-radius: 6px;
-    color: #0f172a;
-    font-weight: bold;
-    cursor: pointer;
-    margin-top: 10px;
-    width: 80%;
-}
-</style>
-
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
-<div class="dashboard">
-    <div class="card"><span class="label"><i class="fas fa-thermometer-half"></i> Temperature</span><span class="value" id="temp">--</span><span class="unit">°C</span></div>
-    <div class="card"><span class="label"><i class="fas fa-droplet"></i> Humidity</span><span class="value" id="hum">--</span><span class="unit">%</span></div>
-    <div class="card"><span class="label"><i class="fas fa-gauge-high"></i> Pressure</span><span class="value" id="pres">--</span><span class="unit">hPa</span></div>
-    <div class="card"><span class="label"><i class="fas fa-wind"></i> Air Quality (PM2.5)</span><span class="value" id="pm25">--</span><span class="unit">µg/m³</span></div>
-
-    <div class="card"><span class="label"><i class="fas fa-wind"></i> Wind Speed</span><span class="value" id="wind">--</span><span class="unit">km/h</span></div>
-    <div class="card"><span class="label"><i class="fas fa-compass"></i> Wind Direction</span><span class="value" id="dir">--</span></div>
-    <div class="card"><span class="label"><i class="fas fa-cloud-showers-heavy"></i> Rain Status</span><span class="value" id="rain">DRY</span></div>
-    <div class="card"><span class="label"><i class="fas fa-smog"></i> Fog Status</span><span class="value" id="fog">CLEAR</span></div>
-
-    <div class="card">
-        <span class="label"><i class="fas fa-battery-three-quarters"></i> Battery</span>
-        <span class="value" id="batt-pct">--</span><span class="unit">%</span>
-        <span class="batt-subtext" id="batt-volts">0.0V</span> </div>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     
-    <div class="card">
-        <span class="label"><i class="fas fa-fan"></i> Fan Control</span>
-        <div class="value" id="fan-status" style="color: #f87171;">OFF</div><br>
-        <button class="btn-toggle" onclick="toggleFan()">TOGGLE FAN</button>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --accent: #38bdf8;
+            --text-dim: #94a3b8;
+            --danger: #f87171;
+            --success: #4ade80;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-dark);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 { color: var(--accent); margin-bottom: 5px; font-weight: 600; }
+        #date-time { margin-bottom: 30px; color: var(--text-dim); font-size: 1rem; }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 120px;
+        }
+
+        .wide-card { grid-column: span 2; }
+
+        .label { 
+            color: var(--text-dim); 
+            font-size: 0.7rem; 
+            text-transform: uppercase; 
+            letter-spacing: 1.5px; 
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .value { font-size: 2rem; font-weight: bold; }
+        .unit { font-size: 1rem; color: var(--accent); margin-left: 4px; }
+
+        /* Fan Control Styling */
+        .btn-toggle {
+            background: var(--accent);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            color: #0f172a;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: transform 0.1s, background 0.2s;
+            width: 100%;
+        }
+        .btn-toggle:active { transform: scale(0.95); }
+        .btn-toggle:hover { background: #7dd3fc; }
+
+        /* Status Colors */
+        .status-on { color: var(--success); }
+        .status-off { color: var(--danger); }
+        .rain-alert { color: #60a5fa; animation: pulse 1.5s infinite; }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        @media (max-width: 900px) {
+            .dashboard { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Weather Monitoring System</h1>
+    <div id="date-time">Syncing time...</div>
+
+    <div class="dashboard">
+        <div class="card"><span class="label"><i class="fas fa-thermometer-half"></i> Temperature</span><div><span class="value" id="temp">--</span><span class="unit">°C</span></div></div>
+        <div class="card"><span class="label"><i class="fas fa-droplet"></i> Humidity</span><div><span class="value" id="hum">--</span><span class="unit">%</span></div></div>
+        <div class="card"><span class="label"><i class="fas fa-gauge-high"></i> Pressure</span><div><span class="value" id="pres">--</span><span class="unit">hPa</span></div></div>
+        <div class="card"><span class="label"><i class="fas fa-wind"></i> Air Quality (PM2.5)</span><div><span class="value" id="pm25">--</span><span class="unit">µg/m³</span></div></div>
+
+        <div class="card"><span class="label"><i class="fas fa-wind"></i> Wind Speed</span><div><span class="value" id="wind">--</span><span class="unit">km/h</span></div></div>
+        <div class="card"><span class="label"><i class="fas fa-compass"></i> Wind Direction</span><span class="value" id="dir">--</span></div>
+        <div class="card"><span class="label"><i class="fas fa-cloud-rain"></i> Rain Status</span><span class="value" id="rain">DRY</span></div>
+        <div class="card"><span class="label"><i class="fas fa-smog"></i> Fog Status</span><span class="value" id="fog">CLEAR</span></div>
+
+        <div class="card"><span class="label"><i class="fas fa-battery-full"></i> Battery</span><div><span class="value" id="batt-pct">--</span><span class="unit">%</span></div></div>
+        
+        <div class="card">
+            <span class="label"><i class="fas fa-toggle-on"></i> Fan Control</span>
+            <div class="value" id="manual-status" style="font-size: 1.5rem;">OFF</div>
+            <button class="btn-toggle" onclick="toggleFan()">TOGGLE FAN</button>
+        </div>
+
+        <div class="card wide-card">
+            <span class="label">Weather Prediction</span>
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <i class="fas fa-cloud-sun-rain" style="font-size: 3rem; color: #fbbf24;"></i>
+                <div style="text-align: left;">
+                    <div style="font-size: 1.2rem; font-weight: bold;">Partly Cloudy / 28°C</div>
+                    <div style="color: var(--text-dim); font-size: 0.9rem;"><i class="fas fa-triangle-exclamation"></i> ALERT</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card"><span class="label"><i class="fas fa-bolt"></i> Battery Voltage</span><div><span class="value" id="batt-volts">--</span><span class="unit">V</span></div></div>
+        
+        <div class="card">
+            <span class="label"><i class="fas fa-fan" id="fan-icon"></i> Fan Status</span>
+            <div class="value" id="fan-real-status">OFF</div>
+        </div>
+
+        <div class="card wide-card">
+            <span class="label"><i class="fas fa-bell"></i> Weather Alert</span>
+            <div id="alert-text" style="font-size: 1.8rem; font-weight: bold; color: var(--success); margin-top: 5px;">NORMAL</div>
+        </div>
     </div>
 
-    <div class="card wide-card">
-        <span class="label">Weather Prediction</span>
-        <div style="font-size: 1.2rem;"><i class="fas fa-cloud-sun-rain" style="font-size: 2rem;"></i> Partly Cloudy / 28°C</div>
-    </div>
-</div>
+    <script>
+        // FIREBASE CONFIGURATION
+        const firebaseConfig = {
+            apiKey: "AIzaSyAj9oZblvzb7QLG6yC7VIzI0WQ8uqCkbio",
+            databaseURL: "https://iot-weather-monitoring-s-b34e6-default-rtdb.asia-southeast1.firebasedatabase.app/"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // 1. Live Clock
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('date-time').innerText = now.toLocaleDateString() + " | " + now.toLocaleTimeString();
+        }, 1000);
+
+        // 2. Read All Sensors (Path: /Weather)
+        db.ref('Weather').on('value', (snap) => {
+            const data = snap.val() || {};
+
+            // Sensors
+            document.getElementById('temp').innerText = data.temperature || 0;
+            document.getElementById('hum').innerText = data.humidity || 0;
+            document.getElementById('pres').innerText = (data.pressure || 0).toFixed(1);
+            document.getElementById('pm25').innerText = data.pm25 || 0;
+            document.getElementById('wind').innerText = (data.windSpeed || 0).toFixed(1);
+            document.getElementById('dir').innerText = data.windDirection || "N";
+            
+            // Battery Cards
+            document.getElementById('batt-pct').innerText = data.batteryPercent || 0;
+            document.getElementById('batt-volts').innerText = (data.batteryVoltage || 0).toFixed(1);
+
+            // Fog & Rain Status
+            const fogEl = document.getElementById('fog');
+            fogEl.innerText = data.fog || "CLEAR";
+            fogEl.className = data.fog === "FOGGY" ? "value status-off" : "value status-on";
+
+            const rainEl = document.getElementById('rain');
+            if(data.rain === "YES") {
+                rainEl.innerText = "RAINING";
+                rainEl.className = "value rain-alert";
+            } else {
+                rainEl.innerText = "DRY";
+                rainEl.className = "value";
+            }
+
+            // Real-Time Fan Status (Actual hardware state)
+            const realFan = document.getElementById('fan-real-status');
+            const fanIcon = document.getElementById('fan-icon');
+            const isFanOn = data.fanStatus; 
+            
+            realFan.innerText = isFanOn ? "ON" : "OFF";
+            realFan.className = isFanOn ? "value status-on" : "value status-off";
+            
+            if(isFanOn) fanIcon.classList.add('fa-spin');
+            else fanIcon.classList.remove('fa-spin');
+        });
+
+        // 3. Manual Control Listener (Path: /Controls/FanStatus)
+        let currentManualState = false;
+        db.ref('Controls/FanStatus').on('value', (snap) => {
+            currentManualState = snap.val();
+            const manualEl = document.getElementById('manual-status');
+            manualEl.innerText = currentManualState ? "ON" : "OFF";
+            manualEl.className = currentManualState ? "value status-on" : "value status-off";
+        });
+
+        // 4. Manual Fan Toggle Function
+        function toggleFan() {
+            const newState = !currentManualState;
+            db.ref('Controls').update({ FanStatus: newState });
+        }
+    </script>
+</body>
+</html>
